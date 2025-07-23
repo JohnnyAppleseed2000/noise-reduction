@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 class Stft(nn.Module):
     def __init__(self,
@@ -50,17 +50,16 @@ class CnnEncoder(nn.Module):
             nn.BatchNorm2d(32),
             nn.ReLU()  # (16, 129, 282) --> (32, 65, 141)
         )
-        self.proj = nn.Linear(in_features=2080, out_features=512)
 
     def forward(self, spec_mag):
         x1 = self.cnn_encoder1(spec_mag)  # Skip-connection 위해 각 Cnn Block 결과 저장
         x2 = self.cnn_encoder2(x1)
-        x3 = self.cnn_encoder3(x2)
-        (batch, channels, freq, time_step) = x3.shape()
-        x = x3.permute(0, 3, 2, 1)
-        x = x.reshape(batch, time_step, freq*channels)
-        x = self.proj(x)  # transformer 입력 크기 맞추기 위해 (1, 141, 2080) --> (1, 141, 512)로 linear projection
-        return x, x1, x2, x3, time_step, freq, channels
+        x = self.cnn_encoder3(x2)
+
+        skip1 = x1
+        skip2 = x2
+        skip3 = x
+        return x, skip1, skip2, skip3
 
 
 class Transformer(nn.Module):
@@ -81,7 +80,6 @@ class Transformer(nn.Module):
 
     def forward(self, x):
         x = self.transformer(x)
-
         return x
 
 
@@ -91,28 +89,28 @@ class CnnDecoder(nn.Module):
 
         # CNN Decoder
         self.cnn_decoder1 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU()
+            nn.ConvTranspose2d(64, 16, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU()  # (1, 64, 65, 141) -> (1, 16, 130, 282)
         )
         self.cnn_decoder2 = nn.Sequential(
-            nn.ConvTranspose2d(48, 16, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU()
+            nn.ConvTranspose2d(32, 8, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(8),
+            nn.ReLU()  # (1, 32, 130, 282) -> (1, 8, 260, 564)
         )
         self.cnn_decoder3 = nn.Sequential(
-            nn.ConvTranspose2d(24,8, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(8),
-            nn.ReLU()
+            nn.ConvTranspose2d(16,1, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(1),
+            nn.ReLU()  # (1, 16, 260, 564) -> (1, 1, 520, 1128)
         )
 
-    def forward(self, x, x1, x2, x3):
-        skip_connection1 = torch.cat((x, x3), dim=1)
-        decoder1 = self.cnn_decoder1(skip_connection1)
-        skip_connection2 = torch.cat((decoder1, x2), dim=1)
-        decoder2 = self.cnn_decoder2(skip_connection2)
-        skip_connection3 = torch.cat((decoder2, x1), dim=1)
-        decoder3 = self.cnn_decoder3(skip_connection3)
+    def forward(self, input, skip1, skip2, skip3):
+        concat1 = torch.cat((input, skip3), dim=1)
+        decoder1 = self.cnn_decoder1(concat1)
+        concat2 = torch.cat((decoder1, skip2), dim=1)
+        decoder2 = self.cnn_decoder2(concat2)
+        concat3 = torch.cat((decoder2, skip1), dim=1)
+        decoder3 = self.cnn_decoder3(concat3)
         return decoder3
 
 
@@ -123,13 +121,24 @@ class DenoiseModel(nn.Module):
         self.encoder = CnnEncoder()
         self.transformer = Transformer()
         self.decoder = CnnDecoder()
+        self.pre_proj = nn.Linear(in_features=2080, out_features=512)
+        self.post_proj = nn.Linear(in_features=512, out_features=2080)
 
     def forward(self, x):
-        x, spec = self.stft(x)
-        x, x1, x2, x3, time_step, freq, channels = self.encoder(x)
+        x, spec = self.stft(x)  # (batch, channel, freq, time): (1, 1, 513, 1126)
+        x, skip1, skip2, skip3 = self.encoder(x)  # (batch, channels, freq, time): (1, 32, 65, 141)
+
+        (batch, channels, freq, time) = x.shape
+        x = x.reshape(batch, time, freq*channels)  # (1, 65, 2080)
+        x = x.permute(1, 0, 2)
+
+        x = self.pre_proj(x)  # transformer 입력 맞추기 위해 (1, 141, 2080) --> (1, 141, 512)
         x = self.transformer(x)
-        Hy65
-        x = self.decoder(x, x1, x2, x3)
+        x = self.post_proj(x)  # (1, 141, 512) -> (1,141, 2080)
+
+        x = x.reshape(batch, channels, freq, time)  # (1, 32, 65, 141)
+        x = self.decoder(x, skip1, skip2, skip3)
+        x = F.interpolate(x, size=(513, 1126), mode='bilinear', align_corners=False)
         return x
 
 
