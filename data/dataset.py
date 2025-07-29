@@ -7,9 +7,10 @@ import random
 
 from torch.utils.data import Dataset
 
+
 # 데이터셋 디렉토리
-clean_path = "datasets/clean_trainset_28spk_wav"
-noisy_path = "datasets/noisy_trainset_28spk_wav"
+clean_path = "../datasets/clean_trainset_28spk_wav"
+noisy_path = "../datasets/noisy_trainset_28spk_wav"
 
 
 # 데이터셋 구성

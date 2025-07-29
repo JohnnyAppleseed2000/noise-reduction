@@ -1,6 +1,7 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+
 
 class Stft(nn.Module):
     def __init__(self,
@@ -13,8 +14,8 @@ class Stft(nn.Module):
         self.hop_length = hop_length
         self.win_length = win_length
 
-    def forward(self, x):  # x:(1, 288000)를 stft 통해 (1, 513, 1125)로 변환
-        window = torch.hann_window(self.win_length)
+    def forward(self, x):  # x:(1, 288000)를 stft 통해 (1, 513, 1126)로 변환
+        window = torch.hann_window(self.win_length).to(x.device)
 
         # STFT 변환
         spec = torch.stft(
@@ -52,30 +53,28 @@ class CnnEncoder(nn.Module):
         )
 
     def forward(self, spec_mag):
-        x1 = self.cnn_encoder1(spec_mag)  # Skip-connection 위해 각 Cnn Block 결과 저장
-        x2 = self.cnn_encoder2(x1)
-        x = self.cnn_encoder3(x2)
+        encoder1 = self.cnn_encoder1(spec_mag)  # Skip-connection 위해 각 Cnn Block 결과 저장
+        encoder2 = self.cnn_encoder2(encoder1)
+        encoder3 = self.cnn_encoder3(encoder2)
+        x = encoder3
 
-        skip1 = x1
-        skip2 = x2
-        skip3 = x
-        return x, skip1, skip2, skip3
+        return x, encoder1, encoder2, encoder3
 
 
 class Transformer(nn.Module):
     def __init__(self,
                  num_layers=4,
                  d_model=512,
-                 nhead=8
+                 num_head=8
                  ):
         super(Transformer, self).__init__()
         self.num_layers = num_layers
         self.d_model = d_model
-        self.nhead = nhead
+        self.num_head = num_head
 
         # Transformer Encoder
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=self.d_model, nhead=self.nhead), num_layers=self.num_layers
+            nn.TransformerEncoderLayer(d_model=self.d_model, nhead=self.num_head), num_layers=self.num_layers
         )
 
     def forward(self, x):
@@ -93,30 +92,40 @@ class CnnDecoder(nn.Module):
             nn.BatchNorm2d(16),
             nn.ReLU()  # (1, 64, 65, 141) -> (1, 16, 130, 282)
         )
+
         self.cnn_decoder2 = nn.Sequential(
             nn.ConvTranspose2d(32, 8, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(8),
             nn.ReLU()  # (1, 32, 130, 282) -> (1, 8, 260, 564)
         )
         self.cnn_decoder3 = nn.Sequential(
-            nn.ConvTranspose2d(16,1, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(16, 1, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(1),
             nn.ReLU()  # (1, 16, 260, 564) -> (1, 1, 520, 1128)
         )
 
-    def forward(self, input, skip1, skip2, skip3):
-        concat1 = torch.cat((input, skip3), dim=1)
-        decoder1 = self.cnn_decoder1(concat1)
-        concat2 = torch.cat((decoder1, skip2), dim=1)
-        decoder2 = self.cnn_decoder2(concat2)
-        concat3 = torch.cat((decoder2, skip1), dim=1)
-        decoder3 = self.cnn_decoder3(concat3)
-        return decoder3
+    def forward(self, x, encoder1, encoder2, encoder3):
+        # Block1: [Skip connection -> Upsampling]
+        decoder1 = self.cnn_decoder1(torch.cat((x, encoder3), dim=1))
+        encoder2_resized = F.interpolate(encoder2, size=(130, 282),
+                                         mode='bilinear',
+                                         align_corners=False)
+        # Block2: [Skip connection -> Upsampling]
+        decoder2 = self.cnn_decoder2(torch.cat((decoder1, encoder2_resized), dim=1))
+        encoder1_resized = F.interpolate(encoder1, size=(260, 564),
+                                         mode='bilinear',
+                                         align_corners=False)
+        # Block3: [Skip connection -> Upsampling -> 마지막 출력을 입력과 같은 사이즈로 복원]
+        decoder3 = self.cnn_decoder3(torch.cat((decoder2, encoder1_resized), dim=1))
+        decoder3_resized = F.interpolate(decoder3, size=(513, 1126),
+                                         mode='bilinear',
+                                         align_corners=False)
+        return decoder3_resized
 
 
 class DenoiseModel(nn.Module):
     def __init__(self):
-        super(DenoiseModel,self).__init__()
+        super(DenoiseModel, self).__init__()
         self.stft = Stft()
         self.encoder = CnnEncoder()
         self.transformer = Transformer()
@@ -125,21 +134,16 @@ class DenoiseModel(nn.Module):
         self.post_proj = nn.Linear(in_features=512, out_features=2080)
 
     def forward(self, x):
-        x, spec = self.stft(x)  # (batch, channel, freq, time): (1, 1, 513, 1126)
-        x, skip1, skip2, skip3 = self.encoder(x)  # (batch, channels, freq, time): (1, 32, 65, 141)
+        x, spec = self.stft(x)  # (batch_size, channel, freq, time): (batch_size, 1, 513, 1126)
+        x, encoder1, encoder2, encoder3 = self.encoder(x)  # (batch_size, 32, 65, 141)
 
-        (batch, channels, freq, time) = x.shape
-        x = x.reshape(batch, time, freq*channels)  # (1, 65, 2080)
-        x = x.permute(1, 0, 2)
+        (batch_size, channels, freq, time) = x.shape
+        x = x.reshape(time, batch_size, freq * channels)  # (65, batch_size, 2080)
 
-        x = self.pre_proj(x)  # transformer 입력 맞추기 위해 (1, 141, 2080) --> (1, 141, 512)
+        x = self.pre_proj(x)  # transformer 의 차원에 맞춰주기 위해 linear projection -> (65, batch_size, 512)
         x = self.transformer(x)
-        x = self.post_proj(x)  # (1, 141, 512) -> (1,141, 2080)
+        x = self.post_proj(x)  # (65, batch_size, 512) -> (65, batch_size, 2080)
 
-        x = x.reshape(batch, channels, freq, time)  # (1, 32, 65, 141)
-        x = self.decoder(x, skip1, skip2, skip3)
-        x = F.interpolate(x, size=(513, 1126), mode='bilinear', align_corners=False)
+        x = x.reshape(batch_size, channels, freq, time)  # (batch_size, 32, 65, 141)
+        x = self.decoder(x, encoder1, encoder2, encoder3)
         return x
-
-
-
