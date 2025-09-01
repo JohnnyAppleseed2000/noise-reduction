@@ -31,14 +31,19 @@ class CnnDecoder(nn.Module):
         encoder2_resized = F.interpolate(encoder2, size=(130, 282),
                                          mode='bilinear',
                                          align_corners=False)
+
         # Block2: [Skip connection -> Upsampling]
         decoder2 = self.cnn_decoder2(torch.cat((decoder1, encoder2_resized), dim=1))
+        del decoder1, encoder2_resized
         encoder1_resized = F.interpolate(encoder1, size=(260, 564),
                                          mode='bilinear',
                                          align_corners=False)
+
         # Block3: [Skip connection -> Upsampling -> 마지막 출력을 입력과 같은 사이즈로 복원]
         decoder3 = self.cnn_decoder3(torch.cat((decoder2, encoder1_resized), dim=1))
+        del decoder2, encoder1_resized
         decoder3_resized = F.interpolate(decoder3, size=(513, 1126),
                                          mode='bilinear',
                                          align_corners=False)
+        del decoder3
         return decoder3_resized
