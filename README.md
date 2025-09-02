@@ -3,7 +3,9 @@
 모델 구조는 STFT → CNN → Transformer 구조를 사용하여 여러명의 발화자의
 음성이 섞인 음원에서 한 사람만의 음성을 추출합니다.
 
-<audio controls src="audio/clean.wav"></audio>
+[🔊 데모 페이지에서 바로 재생하기] https://johnnyappleseed2000.github.io/noise-reduction/
+
+
 
 ---
 ## 주요 특징
