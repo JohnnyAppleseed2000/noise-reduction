@@ -1,8 +1,45 @@
-# 잡음 제거 데모
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>잡음 제거 데모</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; line-height: 1.6; }
+    h1 { margin-bottom: 8px; }
+    .card { max-width: 640px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin: 16px 0; }
+    .label { font-weight: 600; margin-bottom: 8px; }
+    audio { width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>잡음 제거 데모</h1>
+  <p>아래 재생 버튼으로 샘플을 들어보세요.</p>
 
-아래 플레이어로 샘플을 바로 들어보세요:
+  <div class="card">
+    <div class="label">Noisy (입력)</div>
+    <audio controls preload="none">
+      <source src="/noise-reduction/assets/audio/noisy.wav" type="audio/wav" />
+      브라우저가 audio 태그를 지원하지 않습니다.
+    </audio>
+  </div>
 
-<audio controls preload="none" style="width: 100%; max-width: 520px;">
-  <source src="/noise-reduction/assets/audio/clean.wav" type="audio/wav">
-  브라우저가 오디오 태그를 지원하지 않습니다.
-</audio>
+  <div class="card">
+    <div class="label">Clean (참조 정답)</div>
+    <audio controls preload="none">
+      <source src="/noise-reduction/assets/audio/clean.wav" type="audio/wav" />
+      브라우저가 audio 태그를 지원하지 않습니다.
+    </audio>
+  </div>
+
+  <div class="card">
+    <div class="label">Reconstructed (모델 출력)</div>
+    <audio controls preload="none">
+      <source src="/noise-reduction/assets/audio/reconstructed.wav" type="audio/wav" />
+      브라우저가 audio 태그를 지원하지 않습니다.
+    </audio>
+  </div>
+
+  <p style="color:#6b7280">팁: WAV가 너무 크면 MP3를 함께 제공하면 로딩이 빨라집니다.</p>
+</body>
+</html>
