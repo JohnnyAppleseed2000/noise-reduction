@@ -38,7 +38,7 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 ## 모델
 ### 1. CNN Encoder
 - 입력: log-magnitude STFT 스펙트로그램 
-(𝐵 , 1 , 513 , 1126)
+(Batch_size, 1 , 513 , 1126)
 (B,1,513,1126) (48kHz·6초, n_fft=1024, hop=256).
 - 역할: 하모닉/온셋 등 국소 시간–주파수 패턴 추출 + 다운샘플
 - 1차 encoding: 1×513×1126→ 8×257×563
@@ -46,13 +46,24 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 - 3차 encoding: 16×129×282→32×65×141
 
 ### 2. Transformer
-ㅇㅇ
+입력 정리: 인코더 출력
+(B,32,65,141) → (Time, Batch Size, Channel * Frequency)
+=(141 , B , 2080) 로 reshape 후 Linear Projection 을 통해 차원 축소 
+(2080→512).
 ### 3. CNN Decoder
 ㅇㅇ
 
 
 ---
 ## 학습
+- **손실 함수**: MSE Loss  
+- **Optimizer**: Adam (lr=0.001, weight decay=1e-5)  
+- **Batch Size**: 32  
+- **Epochs**: 30
+- **Early Stopping**: validation loss가 개선되지 않으면 조기 종료  
+ 
+
+학습 과정에서 train loss는 점차 감소하였고, validation loss 기준으로 최적의 모델 가중치를 저장하여 과적합을 방지했습니다.
 
 ---
 ## 복원
