@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="949a5b3b-44e9-4602-b773-be46dd9bd893" name="Changes" comment="index.md 파일에 링크 추가">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/audio/clean.wav" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audio/clean.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/audio/noisy.wav" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audio/noisy.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/audio/reconstructed.wav" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audio/reconstructed.wav" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,11 +51,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\docs" />
       <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\assets\audio" />
       <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\assets" />
       <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\images" />
       <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\data" />
-      <recent name="C:\Users\johnh\PycharmProjects\Noise_Reduction\configs" />
     </key>
   </component>
   <component name="SharedIndexes">
@@ -144,7 +146,15 @@
       <option name="project" value="LOCAL" />
       <updated>1756809590753</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="index.md 파일에 링크 추가">
+      <option name="closed" value="true" />
+      <created>1756810420150</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1756810420151</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
