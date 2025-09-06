@@ -30,7 +30,11 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 - Waveform 형태 그대로가 아닌 STFT 변환을 통해 spectogram 형태의
 데이터를 입력했습니다. Spectogram을 통해 아래 그림과 같이 
 시간축과 주파수축으로 나누어 음원 정보를 시각적으로 나타나게 합니다.
-![librosa-stft-1.png](images%2Flibrosa-stft-1.png)
+
+<div align="center">
+    <img src="images/librosa-stft-1.png" width="300" height="300"/>
+</div>
+
 **Spectogram을 사용함으로써 CNN으로 하모닉과 같은 주파수 영역에 반복적으로
 뜨는 패턴을 추출할 수 있고 Transformer를 통해 시간축 상호작용을
 학습할 수 있습니다.**
