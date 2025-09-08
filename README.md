@@ -32,7 +32,7 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 시간축과 주파수축으로 나누어 음원 정보를 시각적으로 나타나게 합니다.
 
 <div align="center">
-    <img src="images/librosa-stft-1.png" width="300" height="300"/>
+    <img src="images/librosa-stft-1.png" height="300"/>
 </div>
 
 **Spectogram을 사용함으로써 CNN으로 하모닉과 같은 주파수 영역에 반복적으로
@@ -42,6 +42,15 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 
 ---
 ## 모델
+모델의 구조는 아래의 그림과 같습니다. 음원을 spectogram 형태로 
+변환한 후 CNN으로 짧은 시간-주파수 특징들을 추출했습니다. Transformer에 
+입력되기 전 CNN을 거침으로써 지역 특징들을 추출하고 차원 축소를 함으로써
+Transforme
+
+<div align="center">
+    <img src="images/denoiser.drawio.png"/>
+</div>`
+
 ### 1. CNN Encoder
 - 입력: log-magnitude STFT 스펙트로그램 
 (Batch_size, 1 , 513 , 1126)
@@ -54,10 +63,10 @@ clean trainset을 사용했습니다. 모든 음원의 Sample Rate는 48kHz입�
 ### 2. Transformer
 입력 정리: 인코더 출력
 (B,32,65,141) → (Time, Batch Size, Channel * Frequency)
-=(141 , B , 2080) 로 reshape 후 Linear Projection 을 통해 차원 축소 
-(2080→512).
+=(141 , B , 2080) 로 reshape 후 Linear Projection 을 통해 
+차원 축소 (2080→512).
+
 ### 3. CNN Decoder
-ㅇㅇ
 
 
 ---
